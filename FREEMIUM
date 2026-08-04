@@ -1,0 +1,2 @@
+script_key="xZUYLAzSYbABGOaOFkcPhpatvIowqvgq";
+loadstring(game:HttpGet("https://luaegis.net/scripts/v4/loaders/9f945bab-8eb8-4033-8798-4e41e427ac06.lua"))()
