@@ -1,2 +1,1 @@
-script_key="xZUYLAzSYbABGOaOFkcPhpatvIowqvgq";
-loadstring(game:HttpGet("https://luaegis.net/scripts/v4/loaders/9f945bab-8eb8-4033-8798-4e41e427ac06.lua"))()
+script_key="XnaAYqkNGUetOSBmpbQQqbUnUTAJxVPZ";loadstring(game:HttpGet("https://luaegis.net/scripts/v4/loaders/94de72d8-e543-455c-b5e4-782ee7de859b.lua"))()
