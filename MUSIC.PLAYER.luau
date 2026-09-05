@@ -1,48 +1,5 @@
--- =====================================================================
---  FLNS Music Player Module
---  -----------------------------------------------------------------
---  Standalone module extracted from FLNS.VDPATCH.
---  Encapsulates the entire "Music Player" feature:
---    * config container & connection tracker
---    * JSON (de)serialization for saved custom songs
---    * local file IO helpers (read / write / scan "Fallens Music/")
---    * audio validation & getcustomasset() resolution
---    * Obsidian UI page build (info / progress / controls / volume)
---    * playlist management (default + saved + folder-scanned)
---    * playback engine (play / pause / next / prev / auto-advance)
---    * Heartbeat-driven progress updater with throttling
---    * unload() helper for clean teardown
---
---  Public API
---  ----------
---    local MP = (loadstring(game:HttpGet("...FLNS.MusicPlayer.Module.lua"))())
---    local sound = MP.Mount({
---        Library          = Library,
---        Options          = Options,   -- optional, defaults to Library.Options
---        Toggles          = Toggles,   -- optional, defaults to Library.Toggles
---        LocalPlayer      = LocalPlayer,
---        UserInputService = UserInputService,
---        RunService       = RunService,
---        TweenService     = TweenService,
---        notify           = notify,
---        Config           = Config,
---    }, section)                       -- section = UI.MusicBox groupbox
---    -- on unload:
---    MP.Unload(Config)
---
---  All globals the original code relied on are passed in via `deps`
---  so the module has zero hard-coded dependencies on the host script.
--- =====================================================================
-
 local Module = {}
-
--- ---------------------------------------------------------------------
--- Public: Mount the Music Player page into an Obsidian groupbox.
--- Returns the Sound instance for backward compatibility with the
--- original main script (which stores it on Config._MusicPlayer.Sound).
--- ---------------------------------------------------------------------
 function Module.Mount(deps, section)
-    -- ---- validate required deps ------------------------------------
     local Library          = assert(deps.Library,          "[MusicPlayer] deps.Library is required")
     local Options          = deps.Options          or Library.Options
     local Toggles          = deps.Toggles          or Library.Toggles
@@ -54,7 +11,6 @@ function Module.Mount(deps, section)
     local Config           = assert(deps.Config,           "[MusicPlayer] deps.Config is required")
     assert(section, "[MusicPlayer] section (groupbox) is required")
 
-    -- ---- ensure config container exists ----------------------------
     if not Config._MusicPlayer then
         Config._MusicPlayer = { Sound = nil, Connections = {} }
     end
@@ -65,7 +21,6 @@ function Module.Mount(deps, section)
         return conn
     end
 
-    -- ---- tiny UI helper --------------------------------------------
     local function makeUI(parent, className, props)
         local obj = Instance.new(className)
         if parent ~= nil then obj.Parent = parent end
@@ -77,7 +32,6 @@ function Module.Mount(deps, section)
         return obj
     end
 
-    -- ---- resolve Obsidian groupbox container frame -----------------
     local function resolveSectionContainer(sec)
         if typeof(sec) == "Instance" then
             return sec
@@ -99,9 +53,6 @@ function Module.Mount(deps, section)
         return nil
     end
 
-    -- =================================================================
-    -- JSON helpers (mini-encoder/decoder, no HttpService dependency)
-    -- =================================================================
     local function jsonEncodeString(s)
         return '"' .. s:gsub('\\','\\\\'):gsub('"','\\"'):gsub('\n','\\n'):gsub('\r','\\r'):gsub('\t','\\t') .. '"'
     end
@@ -162,9 +113,6 @@ function Module.Mount(deps, section)
         return result
     end
 
-    -- =================================================================
-    -- Local file IO
-    -- =================================================================
     local MP_SAVE_FILE = "Fallens Directory/Music_Player.json"
 
     local function mp_canFileIO()
@@ -214,9 +162,6 @@ function Module.Mount(deps, section)
         return decoded
     end
 
-    -- =================================================================
-    -- Folder scanning & audio validation
-    -- =================================================================
     local MP_MUSIC_FOLDER     = "Fallens Music"
     local MP_ICON_SONG_FOLDER = "rbxthumb://type=Asset&id=13780950281&w=150&h=150"
     local MP_AUDIO_EXTS = {
@@ -300,9 +245,6 @@ function Module.Mount(deps, section)
         return result
     end
 
-    -- =================================================================
-    -- UI atoms
-    -- =================================================================
     local IC = Color3.fromRGB(215, 215, 215)
     local function clickLayer(parent, zi)
         return makeUI(parent, "TextButton", {
@@ -367,9 +309,6 @@ function Module.Mount(deps, section)
         return _mp_makeLucideIcon(parent, MP_LUCIDE_ICONS.pause, S, color, bsz)
     end
 
-    -- =================================================================
-    -- Section builders
-    -- =================================================================
     local function _mp_buildInfoSection(parent, MP_ICON_SONG, MP_ICON_VOL, MP_ICON_MUTE)
         task.spawn(function()
             local ContentProvider = game:GetService("ContentProvider")
@@ -612,9 +551,6 @@ function Module.Mount(deps, section)
         }
     end
 
-    -- =================================================================
-    -- Main page builder
-    -- =================================================================
     local function createMusicPlayerPage(sec)
         local MP_ICON_SONG = "rbxthumb://type=Asset&id=13780950281&w=150&h=150"
         local MP_ICON_VOL  = "rbxthumb://type=Asset&id=117386765962827&w=150&h=150"
@@ -982,17 +918,11 @@ function Module.Mount(deps, section)
         return sound
     end
 
-    -- ---- mount & return sound instance to caller -------------------
     local sound = createMusicPlayerPage(section)
     if sound then Config._MusicPlayer.Sound = sound end
     return sound
 end
 
--- ---------------------------------------------------------------------
--- Public: Unload the music player.
--- Disconnects every tracked connection and destroys the Sound instance.
--- Safe to call multiple times.
--- ---------------------------------------------------------------------
 function Module.Unload(Config)
     if not Config or not Config._MusicPlayer then return end
     if Config._MusicPlayer.Connections then
