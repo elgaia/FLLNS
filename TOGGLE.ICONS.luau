@@ -62,7 +62,7 @@ function M.Mount(env)
     if type(Config.TargetIconShared) ~= "table" then
         Config.TargetIconShared = {
             ModeList = { "Killer", "Survivor", "SCP" },
-            Labels   = { Killer = "K", Survivor = "S", SCP = "SCP" },
+            Labels   = { Killer = "Klr", Survivor = "Surv", SCP = "SCP" },
             Colors   = {
                 Killer   = Color3.fromRGB(255, 60, 60),
                 Survivor = Color3.fromRGB(80, 220, 255),
