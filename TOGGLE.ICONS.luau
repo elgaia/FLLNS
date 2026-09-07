@@ -62,7 +62,7 @@ function M.Mount(env)
     if type(Config.TargetIconShared) ~= "table" then
         Config.TargetIconShared = {
             ModeList = { "Killer", "Survivor", "SCP" },
-            Labels   = { Killer = "Klr", Survivor = "Surv", SCP = "SCP" },
+            Labels   = { Killer = "K", Survivor = "S", SCP = "SCP" },
             Colors   = {
                 Killer   = Color3.fromRGB(255, 60, 60),
                 Survivor = Color3.fromRGB(80, 220, 255),
@@ -169,7 +169,10 @@ function M.Mount(env)
             data.stroke.Color = isOn and onColor or offColor
             data.stroke.Transparency = isOn and 0.1 or 0.6
         end
-        if data.label then
+        if data.IsImage and data.image then
+            data.image.ImageColor3 = isOn and onColor or Color3.fromRGB(235, 235, 240)
+            data.image.ImageTransparency = isOn and 0 or 0.15
+        elseif data.label then
             data.label.TextColor3 = isOn and onColor or Color3.fromRGB(235, 235, 240)
         end
         if data.root then
@@ -215,21 +218,40 @@ function M.Mount(env)
         UIStrokeIcon.Transparency = 0.6
         UIStrokeIcon.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         UIStrokeIcon.Parent = IconRoot
-        local IconLabel = Instance.new("TextLabel")
-        IconLabel.Name = randomString()
-        IconLabel.Parent = IconRoot
-        IconLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-        IconLabel.BackgroundTransparency = 1
-        IconLabel.BorderSizePixel = 0
-        IconLabel.Position = UDim2.fromScale(0.5, 0.5)
-        IconLabel.Size = UDim2.fromScale(0.85, 0.85)
-        IconLabel.ZIndex = 21
-        IconLabel.Font = Enum.Font.GothamBold
-        IconLabel.Text = options.Text or key:sub(1, 4):upper()
-        IconLabel.TextScaled = true
-        IconLabel.TextWrapped = true
-        IconLabel.TextTransparency = 0
-        IconLabel.TextColor3 = Color3.fromRGB(235, 235, 240)
+        local IconLabel
+        local IconImage
+        if options.Image then
+            IconImage = Instance.new("ImageLabel")
+            IconImage.Name = randomString()
+            IconImage.Parent = IconRoot
+            IconImage.AnchorPoint = Vector2.new(0.5, 0.5)
+            IconImage.BackgroundTransparency = 1
+            IconImage.BorderSizePixel = 0
+            IconImage.Position = UDim2.fromScale(0.5, 0.5)
+            IconImage.Size = UDim2.fromScale(options.ImageScale or 0.7, options.ImageScale or 0.7)
+            IconImage.ZIndex = 21
+            IconImage.Image = options.Image
+            IconImage.ImageColor3 = Color3.fromRGB(235, 235, 240)
+            IconImage.ImageTransparency = 0
+            IconImage.ScaleType = Enum.ScaleType.Fit
+            IconImage.ResampleMode = Enum.ResamplerMode.Bilinear
+        else
+            IconLabel = Instance.new("TextLabel")
+            IconLabel.Name = randomString()
+            IconLabel.Parent = IconRoot
+            IconLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+            IconLabel.BackgroundTransparency = 1
+            IconLabel.BorderSizePixel = 0
+            IconLabel.Position = UDim2.fromScale(0.5, 0.5)
+            IconLabel.Size = UDim2.fromScale(0.85, 0.85)
+            IconLabel.ZIndex = 21
+            IconLabel.Font = Enum.Font.GothamBold
+            IconLabel.Text = options.Text or key:sub(1, 4):upper()
+            IconLabel.TextScaled = true
+            IconLabel.TextWrapped = true
+            IconLabel.TextTransparency = 0
+            IconLabel.TextColor3 = Color3.fromRGB(235, 235, 240)
+        end
         local ClickBtn = Instance.new("TextButton")
         ClickBtn.Name = "ClickBtn"
         ClickBtn.Size = UDim2.fromScale(1, 1)
@@ -241,12 +263,14 @@ function M.Mount(env)
             root    = IconRoot,
             stroke  = UIStrokeIcon,
             label   = IconLabel,
+            image   = IconImage,
             btn     = ClickBtn,
             conns   = {},
             GetState = options.GetState,
             ColorOn  = options.ColorOn,
             ColorOff = options.ColorOff,
             SortIndex = options.SortIndex or 0,
+            IsImage  = options.Image ~= nil,
         }
         cfg._icons[key] = data
         local clickConn
@@ -805,6 +829,136 @@ function M.Mount(env)
         Config.State.InstantEscapeToggleButton = nil
     end
 
+    local function resolveMenuIconAsset()
+        if Config and Config.MenuToggle then
+            local a = Config.MenuToggle.IconAsset
+            if type(a) == "string" and a ~= "" then return a end
+            if type(a) == "number" then return "rbxassetid://" .. tostring(a) end
+            if type(Config.MenuToggle.IconImage) == "string" and Config.MenuToggle.IconImage ~= "" then
+                return Config.MenuToggle.IconImage
+            end
+        end
+
+        local libIcon
+        pcall(function()
+            if Library and Library.Window and Library.Window.Icon ~= nil then
+                libIcon = Library.Window.Icon
+            end
+        end)
+        if type(libIcon) == "string" and libIcon ~= "" then return libIcon end
+        if type(libIcon) == "number" then return "rbxassetid://" .. tostring(libIcon) end
+        return "rbxassetid://91112706169806"
+    end
+
+    function Fn.toggleMenu(state)
+        if state == nil then
+            if Library and Library.Toggled ~= nil then
+                state = not Library.Toggled
+            else
+                state = true
+            end
+        end
+        local applied = false
+        pcall(function()
+            if Library and type(Library.Toggle) == "function" then
+                Library:Toggle(state)
+                applied = true
+                return
+            end
+        end)
+        if not applied then
+            pcall(function()
+                if Library and type(Library.SetToggle) == "function" then
+                    Library:SetToggle(state)
+                    applied = true
+                    return
+                end
+            end)
+        end
+        if not applied then
+            pcall(function()
+                if Library and type(Library.SetVisible) == "function" then
+                    Library:SetVisible(state)
+                    applied = true
+                    return
+                end
+            end)
+        end
+        if not applied then
+            pcall(function()
+                if Library then
+                    local target = Library.ScreenGui
+                        or Library.MainGui
+                        or Library.Gui
+                        or (Library.Window and Library.Window.ScreenGui)
+                        or (Library.Window and Library.Window.Parent)
+                    if target then
+                        target.Enabled = state
+                        if Library.Toggled ~= nil then Library.Toggled = state end
+                        applied = true
+                    end
+                end
+            end)
+        end
+        if not applied and Library then
+            pcall(function() Library.Toggled = state end)
+        end
+        task.defer(function()
+            pcall(function() Fn.updateToggleIconVisual("MenuToggle") end)
+        end)
+        return applied
+    end
+
+    function Fn.createMenuToggleButton()
+        local iconAsset = resolveMenuIconAsset()
+        Fn.createToggleIcon({
+            Key        = "MenuToggle",
+            Image      = iconAsset,
+            ImageScale = 0.72,
+            ColorOn    = Color3.fromRGB(51, 124, 255),
+            ColorOff   = Color3.fromRGB(235, 235, 240),
+            SortIndex  = 0,
+            GetState   = function()
+                if Library and Library.Toggled ~= nil then
+                    return Library.Toggled and true or false
+                end
+                return true
+            end,
+            OnToggle   = function(v)
+                Fn.toggleMenu(v)
+                if notify then
+                    notify("FALLENS Menu", v and "Menu shown" or "Menu hidden", 1.5)
+                end
+            end,
+        })
+        Config.State.MenuToggleButton = Config.ToggleIcons._icons.MenuToggle
+            and Config.ToggleIcons._icons.MenuToggle.root or nil
+    end
+    function Fn.removeMenuToggleButton()
+        Fn.removeToggleIcon("MenuToggle")
+        Config.State.MenuToggleButton = nil
+    end
+
+    do
+        local lastSeen = nil
+        local conn
+        pcall(function()
+            if RunService and RunService.Heartbeat then
+                conn = RunService.Heartbeat:Connect(function()
+                    if not Config.ToggleIcons._icons.MenuToggle then return end
+                    local cur = Library and Library.Toggled ~= nil and Library.Toggled or true
+                    if cur ~= lastSeen then
+                        lastSeen = cur
+                        pcall(function() Fn.updateToggleIconVisual("MenuToggle") end)
+                    end
+                end)
+                if Config.State then
+                    Config.State.MenuToggleSyncConn = conn
+                end
+            end
+        end)
+    end
+
     return M
 end
 
@@ -823,10 +977,15 @@ function M.Unload(Config)
     pcall(function() _Fn.removeToggleIcon("GunAimTargetIcon") end)
     pcall(function() _Fn.removeToggleIcon("ToFAimV2TargetIcon") end)
     pcall(function() _Fn.removeToggleIcon("ToFAimV1TargetIcon") end)
+    pcall(function() _Fn.removeMenuToggleButton() end)
 
     if Config.State and Config.State.ToFTargetCycleKeybindConn then
         pcall(function() Config.State.ToFTargetCycleKeybindConn:Disconnect() end)
         Config.State.ToFTargetCycleKeybindConn = nil
+    end
+    if Config.State and Config.State.MenuToggleSyncConn then
+        pcall(function() Config.State.MenuToggleSyncConn:Disconnect() end)
+        Config.State.MenuToggleSyncConn = nil
     end
 
     local cfg = Config.ToggleIcons
@@ -856,6 +1015,7 @@ function M.Unload(Config)
     end
     if Config.State then
         Config.State.ToggleIconsGui = nil
+        Config.State.MenuToggleButton = nil
     end
 end
 
